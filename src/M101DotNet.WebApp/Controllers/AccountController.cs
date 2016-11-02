@@ -14,8 +14,6 @@ namespace M101DotNet.WebApp.Controllers
     [AllowAnonymous]
     public class AccountController : Controller
     {
-        private BlogContext _blogContext = new BlogContext();
-
         [HttpGet]
         public ActionResult Login(string returnUrl)
         {
@@ -35,12 +33,8 @@ namespace M101DotNet.WebApp.Controllers
                 return View(model);
             }
 
-            
-            // XXX WORK HERE
-            // fetch a user by the email in model.Email
-            
-            var user = await GetUser(model.Email);
-
+            var blogContext = new BlogContext();
+            var user = await blogContext.Users.Find(x => x.Email == model.Email).SingleOrDefaultAsync();
             if (user == null)
             {
                 ModelState.AddModelError("Email", "Email address has not been registered.");
@@ -86,32 +80,15 @@ namespace M101DotNet.WebApp.Controllers
                 return View(model);
             }
 
-            
-            // XXX WORK HERE
-            // create a new user and insert it into the database
+            var blogContext = new BlogContext();
+            var user = new User
+            {
+                Name = model.Name,
+                Email = model.Email
+            };
 
-            var user = await GetUser(model.Email);
-
-            if (user == null)
-                await InsertUser(model.Name, model.Email);
-
-
+            await blogContext.Users.InsertOneAsync(user);
             return RedirectToAction("Index", "Home");
-        }
-
-        private async Task InsertUser(string name, string email)
-        {
-            await _blogContext.Users.InsertOneAsync(new User { Name = name, Email = email });
-        }
-
-        private async Task<User> GetUser(string email)
-        {
-            
-            var builder = Builders<User>.Filter;
-            var filter = builder.Eq(x => x.Email, email);
-            var result = await _blogContext.Users.Find(filter).ToListAsync();
-            return result.Count > 0 ? result[0] : null;
-
         }
 
         private string GetRedirectUrl(string returnUrl)
